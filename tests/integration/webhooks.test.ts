@@ -1,22 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import { buildApp } from "../../src/app.js";
-import { db } from "../../src/db/client.js";
 import type { FastifyInstance } from "fastify";
-import crypto from "node:crypto";
 
-// ─── Stripe webhook signature helper ─────────────────────────────────────────
-
-function signWebhookPayload(payload: string, secret: string): string {
-  const timestamp = Math.floor(Date.now() / 1000);
-  const signedPayload = `${timestamp}.${payload}`;
-  const sig = crypto
-    .createHmac("sha256", secret)
-    .update(signedPayload)
-    .digest("hex");
-  return `t=${timestamp},v1=${sig}`;
-}
-
-const WEBHOOK_SECRET = "whsec_stub";
+// Mock stripeService so tests control webhook handling without touching Stripe SDK
+vi.mock("../../src/services/stripeService.js", () => ({
+  stripeService: {
+    handleWebhook: vi.fn(),
+    createCheckoutSession: vi
+      .fn()
+      .mockResolvedValue("https://checkout.stripe.com/test"),
+  },
+}));
 
 let app: FastifyInstance;
 
@@ -41,13 +35,19 @@ describe("POST /api/webhooks/stripe", () => {
     expect(res.json().code).toBe("MISSING_SIGNATURE");
   });
 
-  it("returns 400 for an invalid signature", async () => {
-    const payload = JSON.stringify({ type: "checkout.session.completed", id: "evt_1" });
+  it("returns 400 when handleWebhook throws an invalid-signature error", async () => {
+    const { stripeService } = await import("../../src/services/stripeService.js");
+    vi.mocked(stripeService.handleWebhook).mockRejectedValue(
+      Object.assign(new Error("Invalid Stripe webhook signature"), {
+        statusCode: 400,
+        code: "INVALID_SIGNATURE",
+      }),
+    );
 
     const res = await app.inject({
       method: "POST",
       url: "/api/webhooks/stripe",
-      payload,
+      payload: JSON.stringify({ type: "checkout.session.completed" }),
       headers: {
         "content-type": "application/json",
         "stripe-signature": "t=1234,v1=invalidsig",
@@ -56,75 +56,20 @@ describe("POST /api/webhooks/stripe", () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it("returns 200 for a valid checkout.session.completed event", async () => {
-    // Mock the Stripe constructor so constructEvent succeeds
-    vi.mock("stripe", () => {
-      return {
-        default: vi.fn().mockImplementation(() => ({
-          webhooks: {
-            constructEvent: vi.fn().mockReturnValue({
-              type: "checkout.session.completed",
-              data: {
-                object: {
-                  id: "cs_test_1",
-                  customer: "cus_test",
-                  customer_details: { email: "buyer@example.com" },
-                  customer_email: null,
-                  subscription: null,
-                  line_items: { data: [{ price: { id: "price_solo_lifetime" } }] },
-                },
-              },
-            }),
-          },
-          checkout: {
-            sessions: {
-              retrieve: vi.fn().mockResolvedValue({
-                line_items: { data: [{ price: { id: "price_solo_lifetime" } }] },
-              }),
-            },
-          },
-        })),
-      };
-    });
-
-    vi.mocked(db.user.upsert).mockResolvedValue({
-      id: "user-1",
-      email: "buyer@example.com",
-      createdAt: new Date(),
-    });
-    vi.mocked(db.subscription.upsert).mockResolvedValue({} as never);
-    vi.mocked(db.licenseKey.findUnique).mockResolvedValue(null);
-    vi.mocked(db.licenseKey.create).mockResolvedValue({
-      key: "KERWAN-AAAA-BBBB-CCCC-DDDD",
-    } as never);
-
-    // Mock emailService to avoid Resend calls
-    vi.mock("../../src/services/emailService.js", () => ({
-      emailService: {
-        sendLicenseKey: vi.fn().mockResolvedValue(undefined),
-        sendPaymentFailedNotice: vi.fn().mockResolvedValue(undefined),
-        sendCancellationNotice: vi.fn().mockResolvedValue(undefined),
-      },
-    }));
-
-    const payload = JSON.stringify({
-      type: "checkout.session.completed",
-      id: "evt_test",
-    });
-    const signature = signWebhookPayload(payload, WEBHOOK_SECRET);
+  it("returns 200 when handleWebhook resolves successfully", async () => {
+    const { stripeService } = await import("../../src/services/stripeService.js");
+    vi.mocked(stripeService.handleWebhook).mockResolvedValue(undefined);
 
     const res = await app.inject({
       method: "POST",
       url: "/api/webhooks/stripe",
-      payload,
+      payload: JSON.stringify({ type: "invoice.paid" }),
       headers: {
         "content-type": "application/json",
-        "stripe-signature": signature,
+        "stripe-signature": "t=9999,v1=validsig",
       },
     });
-
-    // The mock may make constructEvent succeed even with stub signature;
-    // what we're testing here is that the route wires through correctly.
-    expect([200, 400]).toContain(res.statusCode);
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ received: true });
   });
 });

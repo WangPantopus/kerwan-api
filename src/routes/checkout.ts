@@ -3,14 +3,6 @@ import { z } from "zod";
 import { stripeService, type PriceId } from "../services/stripeService.js";
 import { config } from "../config.js";
 
-const VALID_PRICE_IDS: PriceId[] = [
-  "solo_monthly",
-  "solo_yearly",
-  "solo_lifetime",
-  "pro_monthly",
-  "pro_yearly",
-  "pro_lifetime",
-];
 
 const createSessionSchema = z.object({
   plan: z.enum([

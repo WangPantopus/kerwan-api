@@ -27,6 +27,7 @@ describe("generateLicenseKeyString", () => {
 
 describe("generateUniqueLicenseKey", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(db.licenseKey.findUnique).mockResolvedValue(null);
   });
 
