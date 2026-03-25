@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [master, staging, dev]
+  pull_request:
+    branches: [master, staging, dev]
+
+jobs:
+  ci:
+    name: Lint · Typecheck · Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://test:test@localhost:5432/kerwan_test
+          STRIPE_SECRET_KEY: sk_test_stub
+          STRIPE_WEBHOOK_SECRET: whsec_stub
+          STRIPE_PRICE_SOLO_MONTHLY: price_solo_monthly
+          STRIPE_PRICE_SOLO_YEARLY: price_solo_yearly
+          STRIPE_PRICE_SOLO_LIFETIME: price_solo_lifetime
+          STRIPE_PRICE_PRO_MONTHLY: price_pro_monthly
+          STRIPE_PRICE_PRO_YEARLY: price_pro_yearly
+          STRIPE_PRICE_PRO_LIFETIME: price_pro_lifetime
+          RESEND_API_KEY: re_stub
+          APP_URL: https://kerwan.app
+          CHECKOUT_SUCCESS_URL: https://kerwan.app/welcome
+          CHECKOUT_CANCEL_URL: https://kerwan.app/pricing
