@@ -46,6 +46,7 @@ jobs:
           STRIPE_PRICE_PRO_YEARLY: price_pro_yearly
           STRIPE_PRICE_PRO_LIFETIME: price_pro_lifetime
           RESEND_API_KEY: re_stub
+          LICENSE_ENCRYPTION_KEY: test-license-encryption-key-at-least-32-chars
           APP_URL: https://kerwan.app
           CHECKOUT_SUCCESS_URL: https://kerwan.app/welcome
           CHECKOUT_CANCEL_URL: https://kerwan.app/pricing

@@ -15,8 +15,11 @@ COPY src ./src
 RUN npm run db:generate
 RUN npm run build
 
-# Prune dev dependencies
+# Prune dev dependencies — but preserve the generated Prisma client
+# (npm ci --omit=dev wipes node_modules/.prisma which was created by db:generate)
+RUN cp -r node_modules/.prisma .prisma-backup
 RUN npm ci --omit=dev --ignore-scripts
+RUN cp -r .prisma-backup node_modules/.prisma && rm -rf .prisma-backup
 
 # ─── Stage 2: Runtime ─────────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime

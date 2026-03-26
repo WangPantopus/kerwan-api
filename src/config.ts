@@ -39,6 +39,9 @@ const envSchema = z.object({
     .default("https://kerwan.app/welcome?session_id={CHECKOUT_SESSION_ID}"),
   CHECKOUT_CANCEL_URL: z.string().url().default("https://kerwan.app/pricing"),
 
+  // License encryption key — used to HMAC-sign license keys for tamper detection
+  LICENSE_ENCRYPTION_KEY: z.string().min(32),
+
   // Optional: internal admin key for server-to-server calls
   ADMIN_API_KEY: z.string().min(32).optional(),
 
