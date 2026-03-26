@@ -12,4 +12,4 @@ restartPolicyMaxRetries = 3
 name = "kerwan-api"
 
 [services.deploy]
-startCommand = "node dist/server.js"
+startCommand = "npx prisma migrate deploy && node dist/server.js"

@@ -12,6 +12,7 @@ process.env["STRIPE_PRICE_PRO_MONTHLY"] = "price_pro_monthly";
 process.env["STRIPE_PRICE_PRO_YEARLY"] = "price_pro_yearly";
 process.env["STRIPE_PRICE_PRO_LIFETIME"] = "price_pro_lifetime";
 process.env["RESEND_API_KEY"] = "re_stub";
+process.env["LICENSE_ENCRYPTION_KEY"] = "test-license-encryption-key-at-least-32-chars";
 process.env["APP_URL"] = "https://kerwan.app";
 process.env["CHECKOUT_SUCCESS_URL"] = "https://kerwan.app/welcome";
 process.env["CHECKOUT_CANCEL_URL"] = "https://kerwan.app/pricing";

@@ -11,6 +11,7 @@ import { licenseRoutes } from "./routes/license.js";
 import { webhookRoutes } from "./routes/webhooks.js";
 import { updatesRoutes } from "./routes/updates.js";
 import { checkoutRoutes } from "./routes/checkout.js";
+import { validateUserAgent } from "./middleware/userAgent.js";
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -113,9 +114,10 @@ export async function buildApp(): Promise<FastifyInstance> {
   // ─── Routes ─────────────────────────────────────────────────────────────────
   await app.register(healthRoute);
 
-  // License endpoints — tighter rate limit (10 req/min per IP)
+  // License endpoints — tighter rate limit (10 req/min per IP) + User-Agent check
   await app.register(
     async (instance) => {
+      instance.addHook("preHandler", validateUserAgent);
       await instance.register(rateLimit, {
         max: 10,
         timeWindow: "1 minute",
@@ -135,7 +137,12 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await app.register(webhookRoutes, { prefix: "/api/webhooks" });
   await app.register(updatesRoutes, { prefix: "/api/updates" });
-  await app.register(checkoutRoutes, { prefix: "/api/checkout" });
+  await app.register(
+    async (instance) => {
+      instance.addHook("preHandler", validateUserAgent);
+      await instance.register(checkoutRoutes, { prefix: "/api/checkout" });
+    },
+  );
 
   return app;
 }

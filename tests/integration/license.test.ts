@@ -17,6 +17,7 @@ afterAll(async () => {
 const validKey = "KERWAN-AAAA-BBBB-CCCC-DDDD";
 const machineId = "mac-test-001";
 const email = "test@example.com";
+const kerwan = { "user-agent": "Kerwan/1.0" };
 
 function makeLicense(overrides: Record<string, unknown> = {}) {
   return {
@@ -42,6 +43,7 @@ describe("POST /api/license/validate", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/license/validate",
+      headers: kerwan,
       payload: { key: validKey, machineId },
     });
 
@@ -59,6 +61,7 @@ describe("POST /api/license/validate", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/license/validate",
+      headers: kerwan,
       payload: { key: validKey, machineId },
     });
 
@@ -77,6 +80,7 @@ describe("POST /api/license/validate", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/license/validate",
+      headers: kerwan,
       payload: { key: validKey, machineId },
     });
 
@@ -88,9 +92,21 @@ describe("POST /api/license/validate", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/license/validate",
+      headers: kerwan,
       payload: { key: validKey }, // missing machineId
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it("returns 403 when User-Agent is not Kerwan", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/license/validate",
+      headers: { "user-agent": "Mozilla/5.0" },
+      payload: { key: validKey, machineId },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe("INVALID_USER_AGENT");
   });
 });
 
@@ -108,6 +124,7 @@ describe("POST /api/license/activate", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/license/activate",
+      headers: kerwan,
       payload: { key: validKey, machineId, email },
     });
 
@@ -123,6 +140,7 @@ describe("POST /api/license/activate", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/license/activate",
+      headers: kerwan,
       payload: { key: validKey, machineId, email },
     });
 
@@ -134,6 +152,7 @@ describe("POST /api/license/activate", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/license/activate",
+      headers: kerwan,
       payload: { key: validKey, machineId, email: "not-an-email" },
     });
     expect(res.statusCode).toBe(400);
@@ -152,6 +171,7 @@ describe("POST /api/license/deactivate", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/license/deactivate",
+      headers: kerwan,
       payload: { key: validKey, machineId },
     });
 
@@ -164,6 +184,7 @@ describe("POST /api/license/deactivate", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/license/deactivate",
+      headers: kerwan,
       payload: { key: "KERWAN-XXXX-XXXX-XXXX-XXXX", machineId },
     });
 
